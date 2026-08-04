@@ -1,2 +1,2 @@
 # honeypot-project
-creating a attack for monitoring and defend purpose
+creating an attack for monitoring and defend purpose

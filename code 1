@@ -1,8 +1,13 @@
 # 1. Refresh your package index and upgrade existing software to current versions
 sudo apt update && sudo apt upgrade -y
++-y for 'yes'. Without -y, the command pauses indefinitely in an automated environment, waiting for a human to confirm.
 
 # 2. Install utility tools required to download files securely over HTTPS
 sudo apt install -y curl ca-certificates gnupg
++This trio is usually the prerequisite step before adding third-party repositories (like Docker, Node.js, or PostgreSQL) to your system.
++curl downloads the third-party GPG security key or repository file.
++ca-certificates ensures the connection to download that key is secure and trusted.
++gnupg imports and decrypts/verifies the security key so apt can safely install software from that new source.
 
 # 3. Create a secure folder to store Docker's official encryption key
 sudo install -m 0755 -d /etc/apt/keyrings

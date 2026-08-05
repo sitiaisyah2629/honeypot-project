@@ -1,0 +1,56 @@
+Step 2A: Create Project Folders
++mkdir -p ~/honeypot-soc/promtail
++mkdir -p ~/honeypot-soc/loki
++cd ~/honeypot-soc
+Step 2B: Open text editor loki/loki-config.yaml
++nano loki/loki-config.yaml
+------------------------------------in the text loki/loki-config.yaml--------------------------
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  path_prefix: /tmp/loki
+  storage:
+    filesystem:
+      chunks_directory: /tmp/loki/chunks
+      rules_directory: /tmp/loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-05-15
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h  
+---------------------------------in the text loki/loki-config.yaml------------------------------
+Step 2C: Open text editor promtail/promtail-config.yaml
++nano promtail/promtail-config.yaml
+---------------------------------in the text promtail/promtail-config.yaml-----------------------
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: cowrie-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: cowrie
+          host: ubuntu-vm
+          __path__: /var/log/cowrie/cowrie.json*
+  ---------------------------------in the text promtail/promtail-config.yaml-----------------------

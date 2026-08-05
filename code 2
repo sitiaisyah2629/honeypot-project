@@ -6,10 +6,11 @@ Step 2B: Open text editor loki/loki-config.yaml
 nano loki/loki-config.yaml
 ------------------------------------in the text loki/loki-config.yaml--------------------------
 auth_enabled: false
-
+#Explanation: Disables multi-tenant authentication. In enterprise setups, Loki can split logs for different companies using user IDs. 
+#Setting this to false turns off access control so Grafana can query it locally without needing complex API keys.
 server:
   http_listen_port: 3100
-
+#Explanation: Tells Loki which network port to open. Promtail ships logs to port 3100, and Grafana connects to port 3100 to fetch and display those logs.
 common:
   path_prefix: /tmp/loki
   storage:
@@ -20,6 +21,11 @@ common:
   ring:
     kvstore:
       store: inmemory
+#path_prefix: /tmp/loki: The base folder inside the Loki container where data and temporary files are stored.
+#chunks_directory: Raw log lines are compressed into small binary blocks called "chunks." This sets the folder where those compressed log chunks live.
+#rules_directory: The folder where Loki looks for custom log alerting rules.
+#replication_factor: 1: Tells Loki how many copies of each log entry to save across a cluster. Since you are running a single container on one VM, 1 copy is sufficient.
+#ring.kvstore.store: inmemory: Manages node health inside Loki's internal memory database rather than requiring an external cluster manager like Consul or Etcd.
 
 schema_config:
   configs:
@@ -30,6 +36,12 @@ schema_config:
       index:
         prefix: index_
         period: 24h  
+#from: 2020-05-15: The activation date for this storage rule. Any log timestamped after this date follows this format.
+#store: tsdb: Uses Time-Series Database indexing. TSDB makes searching through millions of log lines fast while taking up minimal disk space.
+#object_store: filesystem: Instructs Loki to save the raw log data directly to the local hard drive rather than cloud storage like AWS S3.
+#schema: v13: The database structure version. Version 13 provides optimized indexing performance.
+#index.prefix: index_: All index files created on disk will start with the prefix index_.
+#index.period: 24h: Loki splits its database indexes into daily 24-hour tables, ensuring fast queries when searching recent attack activity.
 ---------------------------------in the text loki/loki-config.yaml------------------------------
 Step 2C: Open text editor promtail/promtail-config.yaml
 nano promtail/promtail-config.yaml
@@ -37,12 +49,17 @@ nano promtail/promtail-config.yaml
 server:
   http_listen_port: 9080
   grpc_listen_port: 0
+#http_listen_port: 9080: Opens a local web port so you can check Promtail's health status or internal metrics via a browser if needed.
+#grpc_listen_port: 0: Disables high-speed gRPC streaming connections, as standard HTTP streaming is sufficient for this environment.
 
 positions:
   filename: /tmp/positions.yaml
+#Explanation: Creates a state file tracking the last line Promtail read in Cowrie's log. If the container restarts, Promtail checks positions.yaml and 
+#picks up exactly where it left off, avoiding duplicate log entries or missed data.
 
 clients:
   - url: http://loki:3100/loki/api/v1/push
+#Explanation: Specifies the target endpoint for shipping logs. It uses Docker's internal hostname (loki), targeting port 3100 via the Loki HTTP push API.
 
 scrape_configs:
   - job_name: cowrie-logs
@@ -53,4 +70,9 @@ scrape_configs:
           job: cowrie
           host: ubuntu-vm
           __path__: /var/log/cowrie/cowrie.json*
+#job_name: cowrie-logs: An internal tracking label for this collection process inside Promtail.
+#labels (job: cowrie, host: ubuntu-vm): Key-value tags attached to every single log line before it gets sent to Loki. 
+#When you search in Grafana later, you use {job="cowrie"} to filter these specific logs.
+#__path__: /var/log/cowrie/cowrie.json*: The file path Promtail monitors. The wildcard * ensures that even if Cowrie rotates logs 
+#(e.g., cowrie.json.2026-08-05), Promtail will still capture every incoming line.
   ---------------------------------in the text promtail/promtail-config.yaml-----------------------

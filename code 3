@@ -1,17 +1,23 @@
 Step 3A: Open the Docker Compose File
 nano docker-compose.yml
 ---------------------------nano docker-compose.yml------------------------------------
-  version: '3.8'
+version: '3.8'
+#Explanation: Specifies the Docker Compose file format standard, unlocking compatibility with modern features like bridge networks and shared volumes.
 
 networks:
   soc-network:
     driver: bridge
+#Explanation: Creates an isolated virtual bridge network inside Docker. Containers connected to soc-network can resolve each other by container name (e.g., promtail can 
+#reach loki simply by addressing http://loki:3100).
 
 volumes:
   cowrie-logs:
   grafana-data:
   crowdsec-db:
   crowdsec-config:
+#cowrie-logs: A shared virtual folder where Cowrie outputs logs, allowing Promtail and CrowdSec to read them simultaneously.
+#grafana-data: Stores your customized dashboards, user preferences, and data source links so they persist across container restarts.
+#crowdsec-db & crowdsec-config: Retains CrowdSec's threat database, active IP bans, and downloaded detection scenarios.
 
 services:
   # 1. THE DECOY TRAP
@@ -25,6 +31,10 @@ services:
     networks:
       - soc-network
     restart: always
+#image: cowrie/cowrie:latest: Downloads the official Cowrie honeypot image from Docker Hub.
+#ports: "2222:2222": Maps port 2222 on your physical Ubuntu VM to port 2222 inside the container.
+#volumes: Connects the container's internal log folder to the shared cowrie-logs storage volume.
+#restart: always: Ensures the honeypot automatically restarts if it crashes or if the VM reboots.
 
   # 2. THE SEARCH DATABASE
   loki:
@@ -38,6 +48,8 @@ services:
     networks:
       - soc-network
     restart: always
+#volumes: Mounts your custom local loki-config.yaml file into the container at /etc/loki/loki-config.yaml.
+#command: Instructs Loki to launch using your specified configuration file instead of its built-in defaults.
 
   # 3. THE LOG SHIPPER
   promtail:
@@ -53,6 +65,8 @@ services:
       - loki
       - cowrie
     restart: always
+#cowrie-logs:/var/log/cowrie:ro: Mounts the shared log volume in Read-Only (ro) mode. This allows Promtail to parse Cowrie's logs without the risk of modifying or deleting them.
+#depends_on: Ensures Promtail waits until both loki and cowrie containers are running before starting up.
 
   # 4. THE VISUAL DASHBOARD
   grafana:
@@ -69,6 +83,8 @@ services:
     depends_on:
       - loki
     restart: always
+#ports: "3000:3000": Opens port 3000 so you can access the Grafana web dashboard via your browser at http://localhost:3000.
+#environment: GF_SECURITY_ADMIN_PASSWORD=admin: Automatically initializes the default administrator password to admin.
 
   # 5. THE AUTOMATED DEFENSE ENGINE
   crowdsec:
@@ -83,4 +99,6 @@ services:
     networks:
       - soc-network
     restart: always
+#COLLECTIONS=crowdsecurity/linux crowdsecurity/cowrie: Downloads predefined detection scenarios designed to analyze Linux SSH authentication behavior and Cowrie honeypot logs.
+#cowrie-logs:/var/log/cowrie:ro: Grants CrowdSec read-only access to Cowrie's live logs to detect brute-force attacks and flag malicious IPs in real time.
 ------------------------------nano docker-compose.yml------------------------------------

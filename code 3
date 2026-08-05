@@ -1,0 +1,86 @@
+Step 3A: Open the Docker Compose File
+nano docker-compose.yml
+---------------------------nano docker-compose.yml------------------------------------
+  version: '3.8'
+
+networks:
+  soc-network:
+    driver: bridge
+
+volumes:
+  cowrie-logs:
+  grafana-data:
+  crowdsec-db:
+  crowdsec-config:
+
+services:
+  # 1. THE DECOY TRAP
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: cowrie_honeypot
+    ports:
+      - "2222:2222"
+    volumes:
+      - cowrie-logs:/cowrie/cowrie-git/var/log/cowrie
+    networks:
+      - soc-network
+    restart: always
+
+  # 2. THE SEARCH DATABASE
+  loki:
+    image: grafana/loki:latest
+    container_name: loki_db
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml
+    command: -config.file=/etc/loki/loki-config.yaml
+    networks:
+      - soc-network
+    restart: always
+
+  # 3. THE LOG SHIPPER
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail_shipper
+    volumes:
+      - ./promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml
+      - cowrie-logs:/var/log/cowrie:ro
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    networks:
+      - soc-network
+    depends_on:
+      - loki
+      - cowrie
+    restart: always
+
+  # 4. THE VISUAL DASHBOARD
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_dashboard
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - soc-network
+    depends_on:
+      - loki
+    restart: always
+
+  # 5. THE AUTOMATED DEFENSE ENGINE
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec_defense
+    environment:
+      - COLLECTIONS=crowdsecurity/linux crowdsecurity/cowrie
+    volumes:
+      - crowdsec-db:/var/lib/crowdsec/data
+      - crowdsec-config:/etc/crowdsec
+      - cowrie-logs:/var/log/cowrie:ro
+    networks:
+      - soc-network
+    restart: always
+------------------------------nano docker-compose.yml------------------------------------

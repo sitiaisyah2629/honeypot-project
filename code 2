@@ -1,9 +1,9 @@
 Step 2A: Create Project Folders
-+mkdir -p ~/honeypot-soc/promtail
-+mkdir -p ~/honeypot-soc/loki
-+cd ~/honeypot-soc
+mkdir -p ~/honeypot-soc/promtail
+mkdir -p ~/honeypot-soc/loki
+cd ~/honeypot-soc
 Step 2B: Open text editor loki/loki-config.yaml
-+nano loki/loki-config.yaml
+nano loki/loki-config.yaml
 ------------------------------------in the text loki/loki-config.yaml--------------------------
 auth_enabled: false
 
@@ -32,7 +32,7 @@ schema_config:
         period: 24h  
 ---------------------------------in the text loki/loki-config.yaml------------------------------
 Step 2C: Open text editor promtail/promtail-config.yaml
-+nano promtail/promtail-config.yaml
+nano promtail/promtail-config.yaml
 ---------------------------------in the text promtail/promtail-config.yaml-----------------------
 server:
   http_listen_port: 9080
